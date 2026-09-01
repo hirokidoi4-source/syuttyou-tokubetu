@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>出張上申自動作成システム2026</title>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/@pdf-lib/fontkit@0.0.4/dist/fontkit.umd.js"></script>
+  <style>
+    /* 画面全体を少しグレーにして、アプリっぽくする */
+    body {
+      background-color: #f3f4f6;
+      font-family: sans-serif;
+      padding: 20px;
+    }
+
+    /* 入力フォーム全体を「白いカード」のように浮かび上がらせる */
+    #business-trip-form, #special-activity-form {
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 8px; /* 角を丸くする */
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* 影をつける */
+      max-width: 800px;
+      margin: 0 auto; /* 画面の中央に配置 */
+    }
+
+    /* 💡 グループごとに下の余白をあける */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    /* ラベル（見出し）のデザイン */
+    label {
+      display: block; /* 入力欄の上に改行して表示させる */
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #333;
+    }
+
+    /* 入力欄（テキスト、日付、時間、数字、プルダウン）のデザイン */
+    input[type="text"], input[type="date"], input[type="time"], input[type="number"], select {
+      width: 100%; /* 横幅いっぱいに広げる */
+      padding: 10px; /* 内側に余白を作ってタップしやすくする */
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+      box-sizing: border-box; /* 枠線がはみ出ないようにする */
+    }
+    
+    /* 💡 横並びにしたい場合の小技 */
+    .flex-group {
+      display: flex;
+      gap: 15px; /* 要素の間に15pxの隙間をあける */
+    }
+    .flex-group > div {
+      flex: 1; /* 箱の横幅を均等（1:1）にする */
+    }
+
+    /* 区切り線のデザイン */
+    .divider {
+      border: none;
+      border-top: 2px dashed #e5e7eb; /* 点線にする */
+      margin: 30px 0; /* 上下に広めの余白を取る */
+    }
+
+    /* ボタン全体をモダンにする */
+    button {
+      background-color: #2563eb; /* スタイリッシュなブルー */
+      color: white; /* 文字は白 */
+      border: none;
+      padding: 14px 20px; /* 大きくして押しやすく */
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 6px; /* 少し丸みを持たせる */
+      cursor: pointer; /* マウスを乗せたら指マークにする */
+      width: 100%; /* 横幅いっぱいの目立つボタンにする */
+      margin-bottom: 15px; /* ボタン同士の隙間 */
+      transition: background-color 0.2s; /* 色が変わるアニメーション */
+    }
+    
+    /* マウスが乗った時の色（ホバーアクション） */
+    button:hover {
+      background-color: #1d4ed8; /* 少し濃いブルーにする */
+    }
+
+    /* 「特別活動願」などのサブボタンは色を変える場合の例 */
+    #btn-next-special {
+      background-color: #10b981; /* グリーン系で別機能であることをアピール */
+    }
+    #btn-next-special:hover {
+      background-color: #059669;
+    }
+
+    /* 💡 特別活動願のチェックボックスを横並びにする */
+   /* 💡 特別活動願のチェックボックスを横並びにする */
+    #time_select {
+      display: flex;
+      flex-wrap: wrap; /* 端までいったら折り返す */
+      gap: 15px; /* 項目同士の隙間 */
+      margin-bottom: 20px;
+    }
+
+    /* 💡 チェックボックスと文字をセットにする小さな箱 */
+    .checkbox-item {
+      display: flex;
+      align-items: center; /* 縦のズレを中央で揃える */
+      gap: 5px; /* 四角と文字の間の小さな隙間 */
+    }
+
+    /* チェックボックスの文字の太字を解除 */
+    .checkbox-item label {
+      margin-bottom: 0;
+      font-weight: normal; 
+    } 
+    /* チェックボックスと文字を綺麗にくっつける */
+    #time_select label {
+      display: inline-block; /* 縦並びのブロックから、横並びに変更 */
+      margin-bottom: 0;
+      font-weight: normal; /* 太字を解除 */
+    }
+  </style>
+</head>
+<body>
+  <!-- =================================
+      1.　出張上申　入力エリア
+        ================================ -->
+  <div id="business-trip-form">
+    <h2>出張上申　必要項目入力</h2>
+
+    <!-- 2. 作成日 -->
+    <div class="form-group">
+      <label for="sakuseibi">作成日：</label> 
+      <input type="date" id="sakuseibi">
+    </div>
+
+    <!-- 3. 申請者 -->
+    <div class="form-group">
+      <label for="name">申請者名：</label>
+      <input type="text" autocomplete="name" id="name" placeholder="東海 太郎">
+    </div>
+    
+
+    <br>
+    <!-- 4. 所属(学年プルダウン、部活動名プルダウン) -->
+    <div class="form-group flex-group">
+      <div>
+        <label for="syozoku-gakunen">所属/学年：</label>
+          <select id="gakunen-select">
+            <option value="">1つ選択してください</option>
+            <option value="1学年" deta-id="data1-id1">1学年</option>
+            <option value="2学年" deta-id="data2-id2">2学年</option>
+            <option value="3学年" deta-id="data3-id3">3学年</option>
+            <option value="学年所属なし" deta-id="data4-id4">学年所属なし</option>
+          </select>
+      </div>
+
+      <div>
+        <label for="bukatsu">部活：</label>
+          <select id="bukatsu">
+            <option value="">1つ選択してください</option>
+            <option value="柔道部" bdata-id="bdata1-id1">柔道部</option>
+            <option value="野球部" bdata-id="bdata2-id2">野球部</option>
+            <option value="サッカー部" bdata-id="bdata3-id3">サッカー部</option>
+            <option value="女子サッカー部" bdata-id="bdata4-id4">女子サッカー部</option>
+            <option value="女子バスケットボール部" bdata-id="bdata5-id5">女子バスケットボール部</option>
+            <option value="陸上競技部" bdata-id="bdata6-id6">陸上競技部</option>
+            <option value="バドミントン部" bdata-id="bdata7-id7">バドミントン部</option>
+            <option value="ラグビー部" bdata-id="bdata8-id8">ラグビー部</option>
+            <option value="剣道部" bdata-id="bdata9-id9">剣道部</option>
+            <option value="チアリーディング部" bdata-id="bdata10-id10">チアリーディング部</option>
+            <option value="女子バレーボール部" bdata-id="bdata11-id11">女子バレーボール部</option>
+            <option value="男子バスケットボール部" bdata-id="bdata12-id12">男子バスケットボール部</option>
+            <option value="男子ソフトテニス部" bdata-id="bdata13-id13">男子ソフトテニス部</option>
+            <option value="女子ソフトテニス部" bdata-id="bdata14-id14">女子ソフトテニス部</option>
+            <option value="卓球部" bdata-id="bdata15-id15">卓球部</option>
+            <option value="ダンス部" bdata-id="bdata16-id16">ダンス部</option>
+            <option value="総合部" bdata-id="bdata17-id17">総合部</option>
+            <option value="吹奏楽部" bdata-id="bdata18-id18">吹奏楽部</option>
+            <option value="書道部" bdata-id="bdata19-id19">書道部</option>
+            <option value="写真部" bdata-id="bdata20-id20">写真部</option>
+            <option value="スポーツクライミング部" bdata-id="bdata22-id22">スポーツクライミング部</option>
+          </select>
+      </div>
+    </div>
+
+
+        <br>  
+        <!-- 5. 出張期間（開始日　〜　終了日） -->
+        <div class="form-group">
+          <label>出張期間：</label>
+            <div class="flex-group">
+              <div>
+                <label for="start-syuttyou-kikan">始まり</label>
+                <input type="date" id="start">
+              </div>
+              <div>
+                <label for="end-syuttyou-kikan">終わり</label>
+                <input type="date" id="end">
+              </div>
+            </div>
+        </div>
+
+              <br>
+        <div class="form-group">
+          <label>出張時間：</label>
+            <div class="flex-group">
+              <div>
+                <label for="start-jikan">始まり</label>
+                <input type="time" id="start_time">
+              </div>
+              <div>
+                <label for="end-jikan">終わり</label>
+                <input type="time" id="end_time">
+              </div>
+            </div>
+        </div>
+
+
+        <br>
+        <!-- 6. 業務数・宿泊数・生徒引率・部活動指導 -->
+        <div class="form-group flex-group">
+          <div>
+            <label for="gyoumu">業務日数：</label>
+            <div style="display: flex; aligin-items: center; gap: 5px;">
+              <input type="number" value="1" min="1" step="1" id="gyoumu">
+              <span>日</span>
+            </div>
+          </div>
+
+          <div>
+            <label for="syukuhaku">宿泊数：</label>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <input type="number" value="0" min="0" step="1" id="syukuhaku">
+              <span>日</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group flex-group">
+          <div>
+            <label for="insotu">生徒引率：</label>
+            <select id="insotu">
+              <option value="">選択：</option>
+              <option value="有">有</option>
+              <option value="無">無</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="bukatsu-sido">部活指導：</label>
+            <select id="sido">
+              <option value="">選択：</option>
+              <option value="有">有</option>
+              <option value="無">無</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 7. 出張先  -->
+        <div class="form-group">
+          <label for="syuttyousaki">出張先：</label>
+          <input type="text" id="syuttyousaki" value="" placeholder="東海大学 湘南校舎">
+        </div>
+
+
+        <div class="form-group">
+          <label for="adorres">出張先住所：</label>
+          <input type="text" id="adorres" value="" placeholder="811-4193　福岡県宗像市田久1-9-2">
+        </div>
+
+        <!-- 8. 目的　-->
+        <div class="form-group">
+          <label for="mokuteki">目的：</label>
+          <input type="text" id="mokuteki" value="" placeholder="学園オリンピックのため">
+        </div>
+
+
+        <!-- 9. 主催　-->
+        <div class="form-group">
+          <label for="syusaisya">主催：</label>
+          <input type="text" id="syusai" value="" placeholder="東海大学学校法人スポーツ課">
+        </div>
+
+
+        <br>
+        <!-- 10. 利用交通　-->
+        <div class="form-group">
+          <label for="riyoukoutu">利用交通：</label>
+          <select id="riyoukoutu">
+            <option value="">選択：</option>
+            <option value="公共交通機関" id="kou">公共交通機関</option>
+            <option value="自家用車" id="ji">自家用車</option>
+            <option value="公用車" id="kouy">公用車</option>
+            <option value="その他" id="sono">その他</option>
+          </select>
+        </div>
+        <!-- 公共交通機関を選択した場合、さらに選択 -->
+        <div class="form-group">
+          <div id="koutyoukoutu-sentaku" style="display: none;">
+            <select id="kou-sentaku">
+              <option value="hikouki">飛行機</option>
+              <option value="densya">電車</option>
+              <option value="bus">バス</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 自家用車を選択した場合 -->
+        <div class="form-group">
+          <div id="jikayousya-sentaku" style="display: none;">    
+            <select id="kou-sentaku2">
+              <option value="">選択してください</option>
+              <option value="honnninn">本人</option>
+              <option value="tasya" id="tasya">他者</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 他者を選択した場合、誰の車に乗ったかを把握するための入力欄 -->
+        <div class="form-group">
+          <div id="tasya-sentaku" style="display: none;">    
+            <label for="tasya-sentaku">同乗した人の氏名を記入：</label>
+              <input type="text" id="doujou">
+          </div>
+        </div>
+
+
+        <br>
+        <!-- 11. 経路　-->
+        <div class="form-group">
+          <label for="keiro" id="keiro">経路：</label>
+          <br>
+          <span class="hajime">スタート</span>
+              <input type="text" id="hajime" placeholder="赤間駅">
+        </div>
+
+        <div class="form-group">
+          <div id="keiro-totyu">
+            <div class="keiro-row">
+              <span class="keiro">途中</span>
+                <input type="text" value="" placeholder="小田原駅など">
+            </div>
+          </div>
+          <button type="button" id="keiro-totyu-btn">途中の道のり 追加</button>
+        </div>
+
+        <div class="form-group">
+          <br>
+          <span class="owari">終着点</span>
+              <input type="text" id="owari" placeholder="博多駅">
+        </div>
+        
+        <br>
+        <!-- =================================================
+              ボタンエリア
+              ================================================ -->
+        <button type="button" id="btn-syuttyou-succes">出張上申を作成</button>
+        <button type="button" id="btn-next-special">特別活動願の追加作成</button>
+
+
+    <!-- ①　出張上申のみ作成ボタン -->
+    <!-- ②　特別活動願の追加入力へ進むボタン -->
+  </div>
+
+
+  <br>
+  <!-- ===================================
+        2. 特別活動願　追加入力エリア
+        ※最初は見えないように隠しておく（display: none;)
+        ================================== -->
+  <div id="special-activity-form" style="display: none;">
+    <h2>特別活動願　追記入力</h2>
+    <!-- 参加生徒情報（［学年プルダウン］＋［氏名入力欄］）のセットを5行ほど作成 -->
+    <label for="time-select">特別活動願の時間申請の選択：</label>
+      <div id="time_select">
+        <div class="checkbox-item">
+          <input type="checkbox" name="特別活動の時間申請" value="時間延長" id="time_id1">　
+          <label for="time_id1">時間延長</label>
+        </div>
+        <div>
+          <input type="checkbox" name="特別活動の時間申請" value="早朝" id="time_id2">　
+          <label for="time_id2">早朝</label>
+        </div>
+        <div>
+            <input type="checkbox" name="特別活動の時間申請" value="土曜日" id="time_id3">
+            <label for="time_id3">土曜日</label>
+        </div>
+        <div>
+          <input type="checkbox" name="特別活動の時間申請" value="日曜日" id="time_id4">　
+          <label for="time_id4">日曜日</label>
+        </div>
+        <div>
+          <input type="checkbox" name="特別活動の時間申請" value="祭日" id="time_id5">　
+          <label for="time_id5">祭日</label>
+        </div>
+        <div>
+          <input type="checkbox" name="特別活動の時間申請" value="校外活動" id="time_id6">　
+          <label for="time_id6">校外活動</label>
+        </div>
+        <div>
+          <input type="checkbox" name="特別活動の時間申請" value="休暇中" id="time_id7">　
+          <label for="time_id7">休暇中</label>
+        </div>
+        <div>
+          <input type="checkbox" name="特別活動の時間申請" value="試験前" id="time_id8">　
+          <label for="time_id8">試験前</label>
+        </div>
+        <div>
+          <input type="checkbox" name="特別活動の時間申請" value="試験中" id="time_id9">　
+          <label for="time_id9">試験中</label>
+        </div>
+        <div>
+          <input type="checkbox" name="特別活動の時間申請" value="対外試合" id="time_id10">　
+          <label for="time_id10">対外試合</label>
+        </div>
+      </div>
+
+    <div class="form-group">
+      <label for="teacher-name">引率者氏名：</label>
+        <br>
+        <div id="insotu_name_area">
+          <div class="insotu-row">
+            <input type="text" name="引率者氏名" placeholder="東海太郎">
+          </div>
+        </div>
+      <button type="button" id="insotu_name_btn">引率者追加</button>
+    </div>
+    <br>
+    <div class="form-group">
+      <label for="seito-name">学年氏名入力：</label>
+
+        <div id="student-list-area">
+          <div class="student-row flex-group" style="margin-bottom: 10px;">
+            <!-- 学年 -->
+            <div>
+              <label>学年</label>
+              <input type="number" value="1" min="1" max="3" step="1">
+            </div>
+
+            <div>
+              <label>組</label>
+              <input type="number" value="1" min="1" max="10" step="1">
+            </div>
+            <!-- 氏名 -->
+            <div style="flex: 2;">
+              <label>氏名：</label>
+              <input type="text" placeholder="東海 太郎">
+            </div>
+          </div>
+        </div>
+
+      <button type="button" id="add-student-btn">生徒追加</button>
+    </div>
+    <!-- ③　最終作成ボタン -->
+  <div class="form-group">
+    <button type="button" id="tokubetsu-btn">特別活動願作成ボタン</button>
+  </div>
+
+  <!-- ===================================
+        3. 印刷プレビューエリア
+    　　※　最初は見えないように隠しておく
+        ================================== -->
+  <div id="print-preview-area" style="display: none;">
+    <!-- Excel/Wordの雛形を再現するエリア。今は空のままでOKです！ -->
+  </div>
+
+  <script>
+    // JavaScriptの動き（表示切り替えやデータ取得）は後でここに書いていきます
+    // 〈フェーズ1〉　画面の切り替え
+    //　①　要素を捕まえる
+    const special_button = document.getElementById('btn-next-special');
+    const syuttyou_area = document.getElementById('business-trip-form');
+    const tokubetsu_area = document.getElementById('special-activity-form');
+    const addStudent_button = document.getElementById('add-student-btn');
+    const addstudentListArea = document.getElementById('student-list-area')
+    const syuttyou_button = document.getElementById('btn-syuttyou-succes');
+    const tokubetsu_button = document.getElementById('tokubetsu-btn');
+    const print_preview_area = document.getElementById('print-preview-area');
+    const add_keiro_area = document.getElementById('keiro-totyu');
+    const add_keiro_btn = document.getElementById('keiro-totyu-btn');
+    const riyoukoutu_select = document.getElementById('riyoukoutu');
+    const koutyoukoutu_div = document.getElementById('koutyoukoutu-sentaku');
+    const jikayousya_div = document.getElementById('jikayousya-sentaku');
+    const kou_sentaku2_select = document.getElementById('kou-sentaku2');
+    const tasya_sentaku_div = document.getElementById('tasya-sentaku');
+    const insotu_area = document.getElementById('insotu_name_area');
+    const insotu_btn = document.getElementById('insotu_name_btn');
+
+    //　②　クリックされた時を検知する
+    special_button.addEventListener('click', function(){
+      //　③　要素を隠す
+      syuttyou_area.style.display='none';
+      //　④　要素を出現させる
+      tokubetsu_area.style.display='block';
+    });
+
+    // ①　「利用交通」が変更された時の処理
+    riyoukoutu_select.addEventListener('change', function() {
+      // まずは全てに透明マントを被せる（リセット）
+      koutyoukoutu_div.style.display = 'none';
+      jikayousya_div.style.display = 'none';
+      tasya_sentaku_div.style.display = 'none';
+
+      // 選ばれた値によって、特定のマントだけを脱がせる（blockにする）
+      if (this.value === '公共交通機関') {
+        koutyoukoutu_div.style.display = 'block';
+      } else if (this.value === '自家用車') {
+        jikayousya_div.style.display = 'block';
+      }
+    });
+    
+    // ②　「本人・他者」が変更された時の処理
+    kou_sentaku2_select.addEventListener('change', function() {
+      if (this.value === 'tasya') {
+        tasya_sentaku_div.style.display = 'block';
+      }else {
+        tasya_sentaku_div.style.display = 'none';
+      }
+    });
+
+
+    //　〈フェーズ2〉　入力欄の動的追加
+    addStudent_button.addEventListener('click', function(){
+      const newRow = `
+        <div class="student-row flex-group" style="margin-bottom: 10px;">
+          <div>
+            <label>学年</label>
+            <input type="number" value="1" min="1" max="3" step="1">
+          </div>
+          <div>
+            <label>組</label>
+            <input type="number" value="1" min="1" max="10" step="1">
+          </div>
+          <div style="flex: 2;">
+            <label>氏名：</label>
+            <input type="text" placeholder="東海 太郎">
+          </div>
+        </div>
+      `;
+
+      addstudentListArea.insertAdjacentHTML('beforeend', newRow);
+
+    });
+
+    // 経路の途中をボタンを押して増やす使用に変更→その対応処理
+    add_keiro_btn.addEventListener('click', function(){
+      const NewRow = `
+        <div class="keiro-row">
+            <span class="keiro">途中</span>
+              <input type="text" value="" placeholder="小田原駅など">
+        </div>
+      `;
+
+      add_keiro_area.insertAdjacentHTML('beforeend', NewRow); 
+    });
+
+
+    // 引率教員追加ボタン
+    insotu_btn.addEventListener('click', function(){
+      const NewName = `
+      <div class="insotu-row">
+        <input type="text" name="引率者氏名" placeholder="東海太郎">
+      </div>
+      `;
+
+     insotu_area.insertAdjacentHTML('beforeend', NewName); 
+    });
+
+    //　〈フェーズ3〉　データの取得とプレビュー生成
+    // ①　大元のスイッチを準備する
+    syuttyou_button.addEventListener('click', function(){
+      saveFormData('syuttyou');
+    })
+
+    tokubetsu_button.addEventListener('click', function(){
+      saveFormData('tokubetsu');
+    })
+
+    // ②　画面に入力された「中身」をかき集める
+    function saveFormData(formType){
+      // 入力値を取得
+      var sakusei_bi = document.getElementById("sakuseibi").value;
+      if(sakusei_bi !== ""){
+        var dateArray = sakusei_bi.split('-');
+        sakusei_bi = `${dateArray[0]}        ${dateArray[1]}      ${dateArray[2]}`;
+      } 
+      var name_data = document.getElementById("name").value;
+      var gakunen_select = document.getElementById("gakunen-select").value;
+      var bukatsu_data = document.getElementById("bukatsu").value;
+      var start_data = document.getElementById("start").value;
+      if(start_data !== ""){
+        var stimeArray = start_data.split('-');
+        start_data = `${stimeArray[0]}          ${stimeArray[1]}          ${stimeArray[2]}`;
+      }
+      var end_data = document.getElementById("end").value;
+      if(end_data !== ""){
+        var etimeArray = end_data.split('-');
+        end_data = `${etimeArray[0]}            ${etimeArray[1]}          ${etimeArray[2]}`;
+      }
+      var gyoumu_data = document.getElementById("gyoumu").value;
+      var syukuhaku_data = document.getElementById("syukuhaku").value;
+      var juusyo = document.getElementById("adorres").value;
+      var insotu_data = document.getElementById("insotu").value;
+      var sido_data = document.getElementById("sido").value;
+      var syuttyousaki_data = document.getElementById("syuttyousaki").value;
+      var mokuteki_data = document.getElementById("mokuteki").value;
+      var syusai_data = document.getElementById("syusai").value;
+      var riyoukoutu_data = document.getElementById("riyoukoutu").value;
+      var kou_sentaku_data = document.getElementById("kou-sentaku").value;
+      var kou_sentaku2_data = document.getElementById("kou-sentaku2").value;
+      var tasya_sentaku_data = document.getElementById("tasya-sentaku").value;
+      var doujou_data = document.getElementById("doujou").value;
+      var keiro_data = document.getElementById("keiro").value;
+      var hajime_data = document.getElementById("hajime").value;
+      let totyuu_array = [];
+      const keiro_row = document.querySelectorAll('.keiro-row');
+      for (let i = 0; i < keiro_row.length; i++) {
+        let totyuu_miti = keiro_row[i].querySelectorAll('input')[0].value;
+        if(totyuu_miti !== ""){
+          totyuu_array.push(totyuu_miti);
+        }
+      }
+      let insotu_array = [];
+      const insotu_rows = document.querySelectorAll('.insotu-row');
+      for (let i = 0; i < insotu_rows.length; i++) {
+        let name = insotu_rows[i].querySelectorAll('input')[0].value;
+        if(name !== ""){
+          insotu_array.push(name);
+        }
+      }
+      var owari_data = document.getElementById("owari").value;
+
+      var start_time_data = document.getElementById("start_time").value;
+      if(start_time_data !== ""){
+        var stime_data = start_time_data.split(':');
+        start_time_data = `${stime_data[0]}            ${stime_data[1]}`;
+      }
+      var end_time_data = document.getElementById("end_time").value;
+      if(end_time_data !== ""){
+        var etime_data = end_time_data.split(':');
+        end_time_data = `${etime_data[0]}                  ${etime_data[1]}`;
+      }
+      let student_list_array = [];
+
+      const rows = document.querySelectorAll('.student-row');
+      for (let i = 0; i < rows.length; i++) {
+        let gakunen = rows[i].querySelectorAll('input')[0].value;
+        let kumi = rows[i].querySelectorAll('input')[1].value;
+        let shimei = rows[i].querySelectorAll('input')[2].value;
+
+        if (shimei !== ""){
+          student_list_array.push(`${gakunen}年${kumi}組　${shimei} \n`);
+        }
+      }
+
+      var jikan_entyou = document.getElementById("time_id1").checked;
+      var soutyou = document.getElementById("time_id2").checked;
+      var doyoubi = document.getElementById("time_id3").checked;
+      var nitiyoubi = document.getElementById("time_id4").checked;
+      var saijitu = document.getElementById("time_id5").checked;
+      var kougaikatudou = document.getElementById("time_id6").checked;
+      var kyuukatyu = document.getElementById("time_id7").checked;
+      var sikenmae = document.getElementById("time_id8").checked;
+      var sikentyu = document.getElementById("time_id9").checked;
+      var taigaisiai = document.getElementById("time_id10").checked;
+
+      // （...前略... let student_list_area_data = ""; と for文の処理 ...）
+      // 💡 for文の閉じカッコ } の直後から、以下のコードに入れ替えてください！
+
+      // 💡 集めたデータを1つの箱（オブジェクト）にまとめる
+      const formData = {
+        sakusei_bi: sakusei_bi,
+        name_data: name_data,
+        gakunen_select: gakunen_select,
+        bukatsu_data: bukatsu_data,
+        start_data: start_data,
+        end_data: end_data,
+        start_time_data: start_time_data,
+        end_time_data: end_time_data,
+        gyoumu_data: gyoumu_data,
+        syukuhaku_data: syukuhaku_data,
+        juusyo: juusyo,
+        insotu_data: insotu_data,
+        sido_data: sido_data,
+        syuttyousaki_data: syuttyousaki_data,
+        mokuteki_data: mokuteki_data,
+        syusai_data: syusai_data,
+        riyoukoutu_data: riyoukoutu_data,
+        kou_sentaku2_data: kou_sentaku2_data,
+        doujou_data: doujou_data,
+        kou_sentaku_data: kou_sentaku_data,
+        hajime_data: hajime_data,
+        totyuu_array: totyuu_array,
+        owari_data: owari_data,
+        student_list_array: student_list_array,
+        jikan_entyou: jikan_entyou,
+        soutyou: soutyou,
+        doyoubi: doyoubi,
+        nitiyoubi: nitiyoubi,
+        saijitu: saijitu,
+        kougaikatudou: kougaikatudou,
+        kyuukatyu: kyuukatyu,
+        sikenmae: sikenmae,
+        sikentyu: sikentyu,
+        taigaisiai: taigaisiai,
+        insotu_array: insotu_array
+      };
+
+      // 💡 プレビュー表示ではなく、PDF作成処理へバトンタッチ！
+      if (formType === 'syuttyou') {
+        createPDF(formData); 
+      } else {
+        createtokubetsuPDF(formData); 
+      }
+    } // ← saveFormData 関数はここで終わり！！！
+
+
+    // 💡 新規追加：PDFを生成する専用の関数
+    async function createPDF(data) {
+      try {
+        console.log("PDF生成スタート！ファイルを読み込んでいます...");
+        
+        const url_pdf = './template.pdf?' + new Date().getTime();
+        const url_font = './NotoSansJP-Regular.ttf';
+        
+        // ファイルの取得
+        const existingPdfBytes = await fetch(url_pdf).then(res => res.arrayBuffer());
+        const fontBytes = await fetch(url_font).then(res => res.arrayBuffer());
+
+        // pdf-libの起動と読み込み
+        const { PDFDocument, rgb } = PDFLib;
+        const pdfDoc = await PDFDocument.load(existingPdfBytes);
+
+        // フォントの登録
+        pdfDoc.registerFontkit(fontkit);
+        const customFont = await pdfDoc.embedFont(fontBytes);
+
+        // 最初のページを取得
+        const pages = pdfDoc.getPages();
+        const firstPage = pages[0];
+
+        // 試しに「名前」を打ち込んでみる
+        firstPage.drawText(data.sakusei_bi, {
+          x:440,
+          y:787,
+          size: 10,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.name_data, {
+          x: 200,
+          y: 720,
+          size: 12,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.gakunen_select, {
+          x: 400,
+          y: 730,
+          size: 9,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.bukatsu_data, {
+          x: 400,
+          y: 715,
+          size: 9,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.start_data, {
+          x: 180,
+          y: 695,
+          size: 10,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.end_data, {
+          x: 360,
+          y: 695,
+          size: 10,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.start_time_data, {
+          x: 240,
+          y: 665,
+          size: 10,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.end_time_data, {
+          x: 370,
+          y: 665,
+          size: 10,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.gyoumu_data, {
+          x: 200,
+          y: 633,
+          size: 15,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.syukuhaku_data, {
+          x: 293,
+          y: 633,
+          size: 15,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.insotu_data, {
+          x: 385,
+          y: 633,
+          size: 15,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.sido_data, {
+          x: 487,
+          y: 633,
+          size: 15,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.syuttyousaki_data, {
+          x: 210,
+          y: 615,
+          size: 8,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.juusyo, {
+          x: 210,
+          y: 600,
+          size: 8,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.mokuteki_data, {
+          x: 160,
+          y: 562,
+          size: 15,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        firstPage.drawText(data.syusai_data, {
+          x: 160,
+          y: 533,
+          size: 15,
+          font: customFont,
+          color: rgb(0, 0, 0),
+        });
+
+        let checkX = 0 ;
+        let checkY = 0;
+
+        if (data.riyoukoutu_data === "公共交通機関") {
+          checkX = 153;
+          checkY = 508;
+        } else if (data.riyoukoutu_data === "自家用車") {
+          checkX = 153;
+          checkY = 498;
+          
+          let circleX = 0;
+
+          if (data.kou_sentaku2_data === "honnninn") {
+            circleX = 230;
+          }else if (data.kou_sentaku2_data === "tasya") {
+            circleX = 252;
+
+            if (data.doujou_data !== "") {
+              firstPage.drawText(data.doujou_data, {
+                x: 295,
+                y: 498,
+                size: 7,
+                font: customFont,
+                color: rgb(0, 0, 0),
+              });
+            }
+          }
+
+          if (circleX !== 0) {
+            firstPage.drawText("◯", {
+              x: circleX,
+              y: 495,
+              size: 15,
+              font: customFont,
+              color: rgb(0, 0, 0),
+            });
+          }
+
+        } else if (data.riyoukoutu_data === "公用車") {
+          checkX = 153;
+          checkY = 488;
+        } else if(data.riyoukoutu_data === "その他") {
+          checkX = 153;
+          checkY = 478;
+        }
+
+        if (checkX !== 0) {
+          firstPage.drawText("レ", {
+            x: checkX,
+            y: checkY,
+            size: 14,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        let startY = 385;
+        let stepY = 17;
+        let bottomRow = 10; // 帰着地の行（もし上下がずれる場合はこの数字を微調整する
+
+        let go_stations = [];
+        if (data.hajime_data !== "") { go_stations.push(data.hajime_data); }
+        for (let i = 0; i < data.totyuu_array.length; i++) {
+          if (data.totyuu_array[i] !== "") { go_stations.push(data.totyuu_array[i]); }
+        }
+        if(data.owari_data !== "") { go_stations.push(data.owari_data); }
+
+        for (let i = 0; i < go_stations.length; i++) {
+          let currentY = startY - (i * stepY);
+
+          if(i === 0) {
+            firstPage.drawText(go_stations[i], { x: 200, y: currentY, size: 8, font: customFont, color: rgb(0, 0 ,0) });
+          }else {
+            firstPage.drawText(go_stations[i - 1], { x: 160, y: currentY, size: 8, font: customFont, color: rgb(0, 0, 0) });
+            firstPage.drawText(go_stations[i],     { x: 280, y: currentY, size: 8, font: customFont, color: rgb(0, 0, 0) });
+          }
+        }
+
+        let return_statinons = [...go_stations].reverse();
+
+        // return_statinons.shift();
+
+        let L = return_statinons.length;
+
+        for (let j = 0; j < L; j++) {
+          let currentY = startY - ((bottomRow - j) * stepY);
+          let k = (L - 1) - j;
+
+          if (j === 0) {
+            firstPage.drawText(return_statinons[k], { x: 160, y: currentY, size: 8, font: customFont, color: rgb(0, 0, 0) });
+          }else {
+            firstPage.drawText(return_statinons[k],     { x: 160, y: currentY, size: 8, font: customFont, color: rgb(0, 0, 0) });
+            firstPage.drawText(return_statinons[k + 1], { x: 280, y: currentY, size: 8, font: customFont, color: rgb(0, 0, 0) });
+          }
+        }
+        // PDFの保存とダウンロード処理
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = '出張上申書_自動作成.pdf';
+        link.click();
+
+        console.log("PDFのダウンロードが完了しました！");
+
+        } catch (error) {
+          console.error("PDFの生成中にエラーが発生しました:", error);
+          alert("PDFの生成に失敗しました。コンソールを確認してください。");
+        }
+        // ⑤　画面切り替え処理を書く
+
+      }
+
+
+      // 💡 特別活動願　作成画面 
+      async function createtokubetsuPDF(data) {
+      try {
+        console.log("PDF生成スタート！ファイルを読み込んでいます...");
+        
+        const url_pdf = './template2.pdf?' + new Date().getTime();
+        const url_font = './NotoSansJP-Regular.ttf';
+        
+        // ファイルの取得
+        const existingPdfBytes = await fetch(url_pdf).then(res => res.arrayBuffer());
+        const fontBytes = await fetch(url_font).then(res => res.arrayBuffer());
+
+        // pdf-libの起動と読み込み
+        const { PDFDocument, rgb } = PDFLib;
+        const pdfDoc = await PDFDocument.load(existingPdfBytes);
+
+        // フォントの登録
+        pdfDoc.registerFontkit(fontkit);
+        const customFont = await pdfDoc.embedFont(fontBytes);
+
+        // 最初のページを取得
+        const pages = pdfDoc.getPages();
+        const firstPage = pages[0];
+
+        // 試しに「名前」を打ち込んでみる
+        firstPage.drawText(data.sakusei_bi, {
+          x:452,
+          y:773,
+          size: 10,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.bukatsu_data, {
+          x:408,
+          y:614,
+          size: 10,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.name_data, {
+          x:408,
+          y:585,
+          size: 15,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.start_data, {
+          x:170,
+          y:460,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.end_data, {
+          x:365,
+          y:460,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.start_time_data, {
+          x:206,
+          y:443,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.end_time_data, {
+          x:300,
+          y:443,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.mokuteki_data, {
+          x: 170,
+          y:426,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.syuttyousaki_data, {
+          x:170,
+          y:408,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.name_data, {
+          x:170,
+          y:389,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.mokuteki_data, {
+          x:180,
+          y:355,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.syuttyousaki_data, {
+          x:180,
+          y:334,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.syusai_data, {
+          x:400,
+          y:353,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.start_time_data, {
+          x:202,
+          y:317,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        firstPage.drawText(data.end_time_data, {
+          x:415,
+          y:317,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+        let joined_insotu_name = data.insotu_array.join('、 ');
+
+        firstPage.drawText(joined_insotu_name, {
+          x:400,
+          y:334,
+          size: 8.5,
+          font: customFont,
+          color: rgb(0,0,0),
+        });
+
+
+        if (data.jikan_entyou === true) {
+          firstPage.drawText("◯", {
+            x: 66,
+            y: 550,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        } 
+
+
+        if (data.soutyou === true) {
+          firstPage.drawText("◯", {
+            x: 156,
+            y: 550,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        if (data.doyoubi === true) {
+          firstPage.drawText("◯", {
+            x: 247,
+            y: 550,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        if (data.nitiyoubi === true) {
+          firstPage.drawText("◯", {
+            x: 342,
+            y: 550,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+
+        if (data.saijitu === true) {
+          firstPage.drawText("◯", {
+            x: 444,
+            y: 550,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        if (data.kougaikatudou === true) {
+          firstPage.drawText("◯", {
+            x: 65,
+            y: 525,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        if (data.kyuukatyu === true) {
+          firstPage.drawText("◯", {
+            x: 156,
+            y: 525,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        if (data.sikenmae === true) {
+          firstPage.drawText("◯", {
+            x: 247,
+            y: 525,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        if (data.sikentyu === true) {
+          firstPage.drawText("◯", {
+            x: 342,
+            y: 525,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        if (data.taigaisiai === true) {
+          firstPage.drawText("◯", {
+            x: 444,
+            y: 525,
+            size: 15,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        let studentStartY = 260;  //一人目のY座標（PDFに合わせて微調整してください。）
+        let studentStepY = 26; //1行ごとの行間の幅（微調整してください）
+
+        let studentStartX = 60; //1列目のX座標（微調整してください）
+        let studentStepX = 167; //右隣の列（2列目）へ移動する時の横幅（微調整してください）
+
+        for(let i = 0; i < data.student_list_array.length; i++) {
+
+          // ここが列と行を判定する魔法の計算式！
+          let col = Math.floor(i / 9);  // 何列目か（0スタート）
+          let row = i % 9;              // 上から何行目か（0スタート）
+
+          // 現在のX座標とY座標を計算
+          let currentX = studentStartX + (col * studentStepX);
+          let currentY = studentStartY - (row * studentStepY);
+
+          firstPage.drawText(data.student_list_array[i], {
+            x: currentX,
+            y: currentY,
+            size: 9,
+            font: customFont,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+
+
+        //特別活動のPDF保存とダウンロードの処理
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes],{ type: "application/pdf" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.click();
+
+        console.log("特別活動願のダウンロードが完了しました！");
+
+      } catch (error) {
+        console.error("特別活動願の生成中にエラーが発生しました:", error);
+        alert("特別活動願の生成に失敗しました。コンソールを確認してください。");
+      } 
+    }
+
+
+
+
+
+
+  </script>
+
+</body>
+</html>
