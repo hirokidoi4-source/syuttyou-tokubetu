@@ -1281,7 +1281,38 @@
       } 
     }
 
+    // ページ(HTML)が読み込まれたら自動入力関数を実行する
+    document.addEventListener('DOMContentLoaded', () => {
+      setAutoFillFromUrl();
+    });
 
+    // URLからデータを取得して自動入力する関数
+    function setAutoFillFromUrl(){
+      // 1 ＆ 2.　URLのパラメーターを取得して翻訳機にかける　
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+
+      //3.　データが存在するかチェックし、変数に格納する
+      const dete = urlParams.get('date');
+      const startTime = urlParams.get('startTime');
+      const endTime = urlParams.get('endTime');
+      const location = urlParams.get('location');
+
+      //4. データがあれば、該当するHTMLのinputタグに代入する
+      // ⚠️注意: 'inyut_dete_id' などの部分は、実際のHTMLのid属性に合わせて書き換えてください。
+      if(date){
+        document.getElementById('start').value = dete;
+      }
+      if(startTime){
+        document.getElementById('start_time').value = startTime;
+      }
+      if(endTime){
+        document.getElementById('end_time').value = endTime;
+      }
+      if(location){
+        document.getElementById('syuttyousaki').value = location;
+      }
+    }
 
 
 
