@@ -1297,6 +1297,7 @@
       const startTime = urlParams.get('startTime');
       const endTime = urlParams.get('endTime');
       const location = urlParams.get('location');
+      const bukatsuName = urlParams.get('bukatuName');
 
       //4. データがあれば、該当するHTMLのinputタグに代入する
       // ⚠️注意: 'inyut_dete_id' などの部分は、実際のHTMLのid属性に合わせて書き換えてください。
@@ -1311,6 +1312,9 @@
       }
       if(location){
         document.getElementById('syuttyousaki').value = location;
+      }
+      if(bukatuName){
+        document.getElementById('bukatsu').value = bukatuName;
       }
     }
 
